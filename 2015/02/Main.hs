@@ -21,5 +21,5 @@ getSurface (x:y:z:_) = 2 * (x + y) + x * y * z
 input =  sum <$> map (getArea . sort) <$> map ( map (getIntFromStr . T.unpack) . (T.splitOn $ T.pack "x")) <$> T.lines <$> T.readFile "./input.txt"
 main :: IO()
 main =do
-  sum <$> map (getArea . sort) <$> map ( map (getIntFromStr . T.unpack) . (T.splitOn $ T.pack "x")) <$> T.lines <$> T.readFile "./input.txt" >>= \res -> putStrLn $ "Part 1: " <> show res
-  sum <$> map (getSurface . sort) <$> map ( map (getIntFromStr . T.unpack) . (T.splitOn $ T.pack "x")) <$> T.lines <$> T.readFile "./input.txt" >>= \res -> putStrLn $ "Part 2: " <> show res
+  sum <$> map ( getArea . sort . map (getIntFromStr . T.unpack) . (T.splitOn $ T.pack "x")) <$> T.lines <$> T.readFile "./input.txt" >>= \res -> putStrLn $ "Part 1: " <> show res
+  sum <$> map ( getSurface . sort . map (getIntFromStr . T.unpack) . (T.splitOn $ T.pack "x")) <$> T.lines <$> T.readFile "./input.txt" >>= \res -> putStrLn $ "Part 2: " <> show res
