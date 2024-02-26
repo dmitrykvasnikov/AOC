@@ -1,0 +1,13 @@
+
+./Main.hs,310
+module Main Main0,1
+combinations combinations5,6
+checkNew checkNew8,9
+checkVowels checkVowels11,12
+checkRepeat checkRepeat14,15
+checkCombinations checkCombinations21,22
+checkRepeat2_1 checkRepeat2_124,25
+checkRepeat2_2 checkRepeat2_232,33
+part1 part141,42
+part2 part247,48
+main main54,55

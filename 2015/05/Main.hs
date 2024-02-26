@@ -6,6 +6,9 @@ import Data.Set as S
 combinations :: [Text]
 combinations = [T.pack x | x <- ["ab", "cd", "pq", "xy"]]
 
+checkNew :: Char -> Bool
+checkNew c = True
+
 checkVowels :: Text-> Bool
 checkVowels = (>2) . T.length . T.filter (flip Prelude.elem ("aeiou"))
 
@@ -45,6 +48,7 @@ part1 filepath = do
 part2 :: FilePath -> IO Int
 part2 filepath = do
   input <- T.lines <$>  T.readFile filepath
+  let g = checkNew 'g'
   let result = Prelude.length $ Prelude.filter (\text -> (checkRepeat2_1 text) && (checkRepeat2_2 $ T.unpack text)) input
   return result
 

@@ -1,0 +1,14 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_NAME	hasktags
+Main	./Main.hs	/^module Main where$/;"	m	line:1	language:Haskell
+checkCombinations	./Main.hs	/^checkCombinations :: Text -> Bool$/;"	ft	signature:(Text -> Bool)	line:22	language:Haskell
+checkNew	./Main.hs	/^checkNew :: Char -> Bool$/;"	ft	signature:(Char -> Bool)	line:9	language:Haskell
+checkRepeat	./Main.hs	/^checkRepeat :: String -> Bool$/;"	ft	signature:(String -> Bool)	line:15	language:Haskell
+checkRepeat2_1	./Main.hs	/^checkRepeat2_1 :: Text -> Bool$/;"	ft	signature:(Text -> Bool)	line:25	language:Haskell
+checkRepeat2_2	./Main.hs	/^checkRepeat2_2 :: String -> Bool$/;"	ft	signature:(String -> Bool)	line:33	language:Haskell
+checkVowels	./Main.hs	/^checkVowels :: Text-> Bool$/;"	ft	signature:(Text-> Bool)	line:12	language:Haskell
+combinations	./Main.hs	/^combinations :: [Text]$/;"	ft	signature:([Text])	line:6	language:Haskell
+main	./Main.hs	/^main :: IO()$/;"	ft	signature:(IO ())	line:55	language:Haskell
+part1	./Main.hs	/^part1 :: FilePath -> IO Int$/;"	ft	signature:(FilePath -> IO Int)	line:42	language:Haskell
+part2	./Main.hs	/^part2 :: FilePath -> IO Int$/;"	ft	signature:(FilePath -> IO Int)	line:48	language:Haskell
