@@ -67,7 +67,8 @@ executable x06
     -- LANGUAGE extensions used by modules in this package.
     default-extensions: OverloadedStrings
                     , ImportQualifiedPost
-
+                    , ViewPatterns
+                    , LambdaCase
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.19.0.0
