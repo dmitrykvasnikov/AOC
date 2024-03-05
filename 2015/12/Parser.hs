@@ -103,7 +103,7 @@ ws = many sp
 ws1 = some sp
 
 decimal :: Parser Int
-decimal = read <$> some (cond "decimal" isDigit)
+decimal = (read <$> some (cond "decimal" isDigit)) <|> ((*(-1)) <$> read <$> (sym '-' *> some (cond "decimal" isDigit)))
 
 parserMain :: IO()
 parserMain = putStrLn "Parser module"
