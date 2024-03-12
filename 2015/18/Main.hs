@@ -52,11 +52,17 @@ getOnGrid grid m = foldl' step S.empty (S.toList grid)
                             3 -> True
                             otherwise -> False
 
+getOnGrid' :: Input -> Size -> Input
+getOnGrid' grid m = S.filter check candidates
+   where check cell = (S.size $ getActiveNbors grid m cell) == 3
+         candidates = foldl' step S.empty (S.toList grid)
+         step res c = S.union res (getNonActiveNbors grid m c)
+
 step :: Size -> Input -> Input
-step m grid = let (on,off) = ((,) <$> flip getOnGrid m <*> flip getOffGrid m) grid
+step m grid = let (on,off) = ((,) <$> flip getOnGrid' m <*> flip getOffGrid m) grid
             in S.union on $ S.difference grid off
 step2 :: Size -> Input -> Input
-step2 m grid = let (on,off) = ((,) <$> flip getOnGrid m <*> flip getOffGrid m) grid
+step2 m grid = let (on,off) = ((,) <$> flip getOnGrid' m <*> flip getOffGrid m) grid
             in S.union corners $ S.union on $ S.difference grid off
 
 part1 :: Input -> Int
