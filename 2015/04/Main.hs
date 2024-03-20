@@ -2,6 +2,10 @@ module Main where
 
 import Data.List (isPrefixOf)
 import Data.Hash.MD5 qualified as H
+import Control.Monad.Accum
+
+func = g + f
+
 
 type Input = String
 
