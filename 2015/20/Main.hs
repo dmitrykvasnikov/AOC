@@ -11,15 +11,6 @@ getDenoms n = ds ++ dsr
     ds' = [div n d | d <- reverse ds]
     dsr = if (ds' !! 0) ^2 == n then tail ds' else ds'
 
-getDenoms' :: Int -> [Int]
-getDenoms' n
-           | n > 50 = [1]
-           |otherwise = ds ++ dsr
-              where
-                lim = floor . sqrt . fromIntegral $ n
-                ds = [d | d <- [1..lim], mod n d == 0]
-                ds' = [div n d | d <- reverse ds]
-                dsr = if (ds' !! 0) ^2 == n then tail ds' else ds'
 
 getGifts :: Int -> Int
 getGifts = (*10) . sum . getDenoms
