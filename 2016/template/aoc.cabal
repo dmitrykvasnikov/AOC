@@ -69,6 +69,7 @@ executable x06
                     , ImportQualifiedPost
                     , ViewPatterns
                     , LambdaCase
+                    , ScopedTypeVariables
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.19.0.0
