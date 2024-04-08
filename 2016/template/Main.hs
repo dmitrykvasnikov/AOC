@@ -22,8 +22,11 @@ type Input = String
 
 getInput :: FilePath -> IO Input
 getInput filepath = do
-  input <- readFile filepath
+  input <- prepare <$> readFile filepath
   return input
+
+prepare :: String -> Input
+prepare = undefined
 
 part1 :: Input -> Int
 part1 input = 42
