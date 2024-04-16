@@ -1,70 +1,74 @@
 module Main where
 
+import Data.ByteString.Char8 (pack)
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Char (toLower)
 import Data.List (group, isInfixOf, sort, scanl')
-import Text.Regex.Applicative (RE, match, (=~), sym, psym, string, many, some, (<|>))
-import Text.Regex.Applicative.Common (decimal)
-import Data.Hash.MD5 qualified as H
 import Data.Map.Strict qualified as M
+import Crypto.Hash
+import Control.Monad.State.Lazy as S
 
--- /** Utilities
-type Parser a = RE Char a
+hash'' bs = show ((hash . pack $ bs) :: Digest MD5)
 
-sepBy :: Parser a -> Parser b -> Parser [a]
-sepBy p s = (:) <$> p <*> many (s *> p)
-
-plus, minus :: forall a . (Enum a, Bounded a) => a -> Int -> a
-plus v n = toEnum ((fromEnum v + n) `mod`  (fromEnum (maxBound :: a) + 1))
-minus v n = plus v (-n)
-inc, dec :: forall a . (Enum a, Bounded a) => a -> a
-inc v = plus v 1
-dec v = plus v (-1)
--- **/
+hash' :: Input -> Secure -> Index -> Hash
+hash' inp sec ind = head . drop (sec + 1) . iterate (map toLower . hash'') $ (inp <> show ind)
 
 type Hash = String
 type Input = String
 type Index = Int
 type Secure = Int
-type Candidate = (Index, Hash)
-type Candidates = M.Map Index String
-type Result = [Index]
-type State = (Candidates, Result)
+data Hashmap = Hashmap {inp :: String, sec :: Int, mem :: M.Map Index Hash } deriving Show
 
-hash :: Input -> Secure -> Index -> Hash
-hash inp sec ind = head . drop (sec + 1) . iterate (map toLower . H.md5s . H.Str) $ (inp <> show ind)
 
 groups :: String -> [(Char, Int)]
 groups = map ((,) <$> head <*> length) . group
 
-check3 :: String -> Maybe String
-check3 [] = Nothing
-check3 (x:[]) = Nothing
-check3 (x:y:[]) = Nothing
-check3 i@(x:y:z:_) = if (x == y) && (x == z)
-                      then (Just (take 5 . repeat $ x))
-                      else check3 $ tail i
+check3 :: String -> Maybe Char
+check3 str = let lst = dropWhile ((< 3) . snd) . groups $ str
+                 in case length lst of
+                    0 -> Nothing
+                    _ -> Just (fst $ head lst)
 
-isCandidate :: State -> Candidate -> State
-isCandidate s@(c, r) (i, h) = case check3 h of
-  Nothing -> s
-  Just str -> (M.insert i str c, r)
+check5 :: Index -> Int -> String -> State Hashmap Bool
+check5 ind cnt str = do
+  if (cnt <= 0)
+  then return False
+  else do
+        h <- getHash ind
+        if isInfixOf str h
+        then return True
+        else check5 (ind+1) (cnt-1) str
 
-updateResult :: State -> Candidate -> State
-updateResult s@(c, r) (i, h) =
-  let toCheck = M.toList $ M.filterWithKey (\k _ -> k + 1000 > i && k /= i) c
-  in foldl update s toCheck
-    where update (c', r') (i', str) = case isInfixOf str h of
-                                        False -> (c', r')
-                                        True -> (M.delete i' c', sort $ r' ++ [i'])
+getHash :: Index -> State Hashmap Hash
+getHash ind = do
+  state <- get
+  let h = M.lookup ind $ mem state
+  case h of
+    (Just val) -> return val
+    Nothing -> do
+      let h' = hash' (inp state) (sec state) ind
+      put $ state { mem = M.insert ind h' (mem state) }
+      return h'
 
-part1 :: Secure -> Input -> [Int]
-part1 sec inp = take 64 . head . filter ((>64) . length) . map snd . scanl' go (M.empty, []) $ map ((,) <$> id <*> hash inp sec) [0..]
+isValid:: Index -> State Hashmap Bool
+isValid ind = do
+  h <- getHash ind
+  case check3 h of
+    Nothing -> return False
+    (Just c) -> check5 (ind+1) 1000 (take 5 $ repeat c)
 
-    where go :: State -> (Index, Hash) -> State
-          go s c = (updateResult (isCandidate s c) c)
+part1, part2 :: Index -> State Hashmap [(Index, Hash)]
+part1 ind = do
+  h <- getHash ind
+  isOk <- isValid ind
+  rest <- part1 (ind + 1)
+  if isOk then return $ (ind, h) : rest
+          else return rest
+
+part2 = undefined
 
 main :: IO()
 main = do
-  let input = "abc"
-  putStrLn "Done"
+  let input = "ngcjuoqr"
+  putStrLn $ "Part 1: " <> (show . fst . head . drop 63 . evalState (part1 0) $ (Hashmap input 0 M.empty))
+  putStrLn $ "Part 2: " <> (show . fst . head . drop 63 . evalState (part1 0) $ (Hashmap input 2016 M.empty))
