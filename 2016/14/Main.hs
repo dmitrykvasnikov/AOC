@@ -1,6 +1,5 @@
 module Main where
 
-import Data.ByteString.Char8 (pack)
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Char (toLower)
 import Data.List (group, isInfixOf, sort, scanl')
