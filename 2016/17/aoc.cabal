@@ -79,6 +79,8 @@ executable x06
                     , regex-applicative
                     , mtl
                     , containers
+                    , cryptonite
+                    , bytestring
 
     -- Directories containing source files.
     hs-source-dirs:   .
