@@ -1,0 +1,125 @@
+
+module Main where
+
+import Data.Maybe (fromMaybe, catMaybes)
+import Text.Regex.Applicative (RE, match, (=~), sym, psym, string, many, some, (<|>))
+import Text.Regex.Applicative.Common (decimal)
+import Data.Set qualified as S
+import Data.Map.Strict qualified as M
+import Debug.Trace
+import Data.List (sort)
+
+-- /** Utilities
+type Parser a = RE Char a
+
+sepBy :: Parser a -> Parser b -> Parser [a]
+sepBy p s = (:) <$> p <*> many (s *> p)
+
+plus, minus :: forall a . (Enum a, Bounded a) => a -> Int -> a
+plus v n = toEnum ((fromEnum v + n) `mod`  (fromEnum (maxBound :: a) + 1))
+minus v n = plus v (-n)
+inc, dec :: forall a . (Enum a, Bounded a) => a -> a
+inc v = plus v 1
+dec v = plus v (-1)
+-- **/
+
+data Equipment = G | M deriving (Eq, Ord, Show)
+data Rock = T | Pr | S | Pl | R deriving (Eq, Ord, Show)
+type Item = (Rock, Equipment)
+type Floor = S.Set Item
+type Input = M.Map Int Floor
+type Hash = String
+type Memory = M.Map Hash Int
+data State = State { fl, len :: Int,  st :: Input } deriving Show
+
+hash :: Floor -> Hash
+hash floor =
+  let items = S.toList floor
+      (g,m,p) = go (0,0,0) items
+      go :: (Int,Int,Int) -> [Item] -> (Int, Int, Int)
+      go res [] = res
+      go res [x] = upd res x
+      go res@(g',m',p') (x@(r1, _):y@(r2, _):rest) =
+        case r1 == r2 of
+          True -> go (g',m',p'+1) rest
+          False -> go (upd res x) (y:rest)
+      upd :: (Int, Int, Int) -> Item -> (Int, Int, Int)
+      upd (g'', m'',p'') (_, M) = (g'', m'' + 1,p'')
+      upd (g'', m'',p'') (_, G) = (g'' + 1, m'',p'')
+  in concat [show g, show m, show p]
+
+hashAll :: Input -> Hash
+hashAll = concatMap hash . map snd  . M.toList
+
+invalid :: Hash -> Bool
+invalid [] = False
+invalid (g:m:_:rest) = if (g /= '0') && (m /= '0') then True else invalid rest
+
+win :: Hash -> Bool
+win [x] = True
+win (x:xs) = x == '0' && win xs
+
+getCandidates :: Floor -> [Floor]
+getCandidates floor = filter (validFloor floor) . map S.fromList . filter validCandidate . go . S.toList $ floor
+  where go :: [Item] -> [[Item]]
+        go [] = []
+        go (x:xs) = [[x]] ++ map (:x:[]) xs ++ go xs
+
+validFloor :: Floor -> Floor -> Bool
+validFloor fl cands = not . invalid . hash . S.difference fl $ cands
+
+validCandidate :: [Item] -> Bool
+validCandidate [x] = True
+validCandidate [(_, G), (_, G)] = True
+validCandidate [(_, M), (_, M)] = True
+validCandidate [(r1, _), (r2, _)] = r1 == r2
+
+getDirections :: State -> [Int]
+getDirections state
+  | fl state == 1 = [2]
+  | fl state == 4 = [3]
+  | otherwise     = if (all (\i -> S.size ((M.!) (st state) i) == 0) [1..f-1]) then [f+1] else [f-1, f+1]
+  where f =  fl state
+
+getAllStates :: State -> [Floor] -> [Int] -> [State]
+getAllStates state cands = concatMap (getStates state cands)
+
+getStates :: State -> [Floor] -> Int -> [State]
+getStates state cands to = map go cands
+  where go :: Floor -> State
+        go cs = state { fl = to, st = M.adjust (flip S.difference cs) (fl state) . M.adjust (S.union cs) to $ st state }
+
+initState = State {fl = 2, len = 0, st = input }
+
+
+input :: Input
+input = M.fromList $ zip [1..] [ S.fromList []
+                               , S.fromList [(Pr, G), (Pr, M)]
+                               , S.fromList []
+                               , S.fromList []
+                               ]
+
+elevator :: [State] -> Memory -> Memory
+elevator [] mem = mem
+elevator (q:qs) mem
+  | len q > M.findWithDefault 100000 h mem = elevator qs mem
+  -- | invalid h = elevator qs res len
+  -- | S.member h (visited q) = elevator qs res len
+  -- | win h = elevator qs
+  | null qs' = elevator qs mem
+  | otherwise = traceShow (map (\s -> hashAll $ st s) (q:qs)) $ elevator (qs ++ qs') (M.insert h (len q) mem)
+  where h = hashAll $ st q
+        dirs = getDirections q
+        qs' = map (\s -> s { len = len s + 1}) . filter ( not . invalid . hashAll . st )
+              . getAllStates q (getCandidates $ (M.!) (st q) (fl q)) $ dirs
+
+part1 :: Input -> Memory
+part1 input = elevator [initState] $ M.empty
+
+part2 :: Input -> Int
+part2 input = 42
+
+main :: IO()
+main = do
+  putStrLn $ "Part 1: " <> show (part1 input)
+  putStrLn $ "Part 2: " <> show (part2 input)
