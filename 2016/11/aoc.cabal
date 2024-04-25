@@ -79,6 +79,9 @@ executable x06
                     , regex-applicative
                     , mtl
                     , containers
+                    , astar
+                    , hashable
+                    , unordered-containers
 
     -- Directories containing source files.
     hs-source-dirs:   .

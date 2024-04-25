@@ -1,12 +1,19 @@
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+
 module Main where
-import Prelude hiding (init)
+
 import Data.Maybe (fromMaybe, catMaybes)
 import Text.Regex.Applicative (RE, match, (=~), sym, psym, string, many, some, (<|>))
 import Text.Regex.Applicative.Common (decimal)
 import Data.Set qualified as S
 import Data.Map.Strict qualified as M
 import Debug.Trace
-import Data.List (sort, sortOn, intercalate)
+import Data.Hashable
+import Data.Hashable.Generic
+import Data.HashSet qualified as H
+import Data.List (foldl', sort, sortOn, intercalate)
+import GHC.Generics
+import Data.Graph.AStar
 
 -- /** Utilities
 type Parser a = RE Char a
@@ -22,23 +29,29 @@ inc v = plus v 1
 dec v = plus v (-1)
 -- **/
 
-data Equipment = G | M deriving (Eq, Ord, Show)
-data Rock = T | Pr | S | Pl | R | E | D deriving (Eq, Ord, Show)
+data Equipment = G | M deriving (Eq, Ord, Show, Generic, Hashable)
+data Rock = T | Pr | S | Pl | R | E | D deriving (Eq, Ord, Show, Generic, Hashable)
 type Item = (Rock, Equipment)
 type Floor = S.Set Item
 type Hash = String
 type Elevator = M.Map Int Floor
 type States = M.Map Hash Int
-data State = State {el :: Elevator, fl, len :: Int} deriving Show
+type Queue = S.Set State
+data State = State {el :: Elevator, fl, len, mag :: Int} deriving (Eq, Ord, Show, Generic, Hashable)
 
-init :: State
-init = State { el = M.fromList [ (1, S.fromList [(D,G), (D,M), (E,G), (E,M), (T,G), (T,M), (Pl,G),(S,G)])
-                               , (2, S.fromList [(Pl,M), (S,M)])
-                               , (3, S.fromList [(Pr,G), (Pr,M), (R,G), (R,M)])
-                               , (4, S.fromList [])], fl = 1, len = 0 }
+initState :: State
+-- initState = State { el = M.fromList [ (1, S.fromList [(S,M), (T,M)])
+                               -- , (2, S.fromList [(S,G)])
+                               -- , (3, S.fromList [(T,G)])
+                               -- (4, S.fromList [])], fl = 1, len = 0 , mag = 0}
+-- initState = State { el = M.fromList [ (1, S.fromList [(T,G), (T,M), (Pl,G),(S,G)])
+initState = State { el = M.fromList [ (1, S.fromList [(E,G),(E,M),(D,G),(D,M),(T,G), (T,M), (Pl,G),(S,G)])
+                              , (2, S.fromList [(Pl,M), (S,M)])
+                              , (3, S.fromList [(Pr,G), (Pr,M), (R,G), (R,M)])
+                              , (4, S.fromList [])], fl = 1, len = 0, mag = 0 }
 
 showF :: Floor -> String
-showF = concat . pairs . map show  . S.toList
+showF = concat . pairs . Prelude.map show  . S.toList
   where pairs :: [String] -> [String]
         pairs [] = []
         pairs [x] = [x]
@@ -47,7 +60,7 @@ showF = concat . pairs . map show  . S.toList
          | otherwise = s1 : pairs (s2:rest)
 
 showE :: State -> String
-showE st = show (fl st) <> (intercalate "|" .  map ( showF . snd) . M.toList . el $ st)
+showE st = show (fl st) <> (intercalate "|" .  Prelude.map ( showF . snd) . M.toList . el $ st)
 
 hash1 :: Floor -> String
 hash1 f = let (a,b,c) = go (0,0,0) (S.toList f)
@@ -61,7 +74,7 @@ hash1 f = let (a,b,c) = go (0,0,0) (S.toList f)
           in (show a <> show b <> show c)
 
 hashA :: Elevator -> String
-hashA = concat . map (hash1 . snd) . M.toList
+hashA = concat . Prelude.map (hash1 . snd) . M.toList
 
 isValidHash :: Hash -> Bool
 isValidHash [] = True
@@ -71,12 +84,14 @@ isGoal :: Hash -> Bool
 isGoal [x] = True
 isGoal (x:xs) = x == '0' && isGoal xs
 
-getStates :: State -> [State]
-getStates state = filter (isValidHash . hashA . el) . concatMap go $ dirs
+getStates :: State -> States ->  [State]
+getStates state h = Prelude.map (\s -> s { mag = magic s }) .
+                    Prelude.filter ((&&) <$> (isValidHash . hashA . el) <*> (not . flip M.member h . showE) )
+                    . concatMap go $ dirs
   where dirs = getDirections state
         moves = getMoves $ (M.!) (el state) (fl state)
         go :: Int -> [State]
-        go dir = map (\m ->
+        go dir = Prelude.map (\m ->
                       State
                       { fl = dir
                       , len = len state + 1,
@@ -91,30 +106,78 @@ getDirections state
   where f = fl state
 
 getMoves :: Floor -> [Floor]
-getMoves = map S.fromList . filter isValidPair . go . S.toList
+getMoves = Prelude.map S.fromList . Prelude.filter isValidPair . go . S.toList
   where go [] = []
-        go (x:xs) = [[x]] ++ map (:x:[]) xs ++ go xs
+        go (x:xs) = [[x]] ++ Prelude.map (:x:[]) xs ++ go xs
         isValidPair [x] = True
         isValidPair ((_,G):(_,G):_) = True
         isValidPair ((_,M):(_,M):_) = True
         isValidPair ((r1, _):(r2,_):_) = r1 == r2
 
-elevator :: [State] -> States -> States
-elevator [] states = states
-elevator (s:ss) states
-  | M.member h' states = elevator ss states
-  | isGoal h = elevator ss $ M.insert h' (len s) states
-  | otherwise =  elevator (ss ++ (getStates s)) $ M.insert h' (len s) states
-  where h = hashA $ el s
-        h' = showE s
+-- elevator :: [State] -> States -> Int -> Int
+-- elevator [] _ _ = error "Can not find solution!"
+-- elevator (s:ss) states l
+  -- | M.member h' states = elevator ss states l
+  -- | goal l s = elevator ss (M.insert h' (len s) states) l
+  -- | goal l s = len s
+  -- | otherwise =  elevator (ss ++ (getStates s)) (M.insert h' (len s) states) l
+  -- where h' = showE s
 
-part1 :: Int
-part1 = head . reverse . map snd . M.toList . elevator [init] $ M.empty
+elevator :: Queue -> States -> Int -> Int
+elevator q s l
+  | S.null q = error "No solution found"
+  | goal l state = len state
+  | M.member h s = elevator states s l
+  | otherwise = elevator (S.union states (S.fromList $ getStates state s)) (M.insert h (len state) s) l
+  where (state, states) = choose q
+        h = showE state
 
-part2 :: Int
-part2 = flip (M.!) "000000000001" . elevator [init] $ M.empty
+goal :: Int -> State -> Bool
+goal l s  = l == (S.size . flip (M.!) 4 . el $ s)
+
+magic :: State -> Int
+magic s = Data.List.foldl' go 0 [1..3]
+   where go r i = r + (m i) * (S.size $ (M.!) (el s) i)
+         m 1 = 4
+         m 2 = 2
+         m 3 = 1
+
+choose :: Queue -> (State, Queue)
+choose states =
+  let pick = S.foldl' (\r s -> if (len s + mag s) <= (len r + mag r) then s else r) (head . S.toList . S.take 1 $ states) (S.drop 1 states)
+  in (pick, S.difference states $ S.singleton pick)
+
+eLength :: State -> Int
+eLength = sum . Prelude.map (S.size . snd) . M.toList . el
+
+part1 :: State -> Int
+-- part1 input = head . reverse . Prelude.map snd . M.toList . elevator [input] M.empty $ eLength input
+part1 input = elevator (S.singleton input)  M.empty $ eLength input
+
+dstA :: State -> State -> Int
+dstA _ _ = 1
+
+goalA :: State -> Bool
+goalA state = goal (eLength state) state
+
+nbrs :: State -> H.HashSet State
+nbrs state  = Data.List.foldl' (flip H.insert) H.empty
+                    . Prelude.map (\s -> s { mag = magic s })
+                    . Prelude.filter (isValidHash . hashA . el )
+                    . concatMap go $ dirs
+  where dirs = getDirections state
+        moves = getMoves $ (M.!) (el state) (fl state)
+        go :: Int -> [State]
+        go dir = Prelude.map (\m ->
+                      State
+                      { fl = dir
+                      , len = len state + 1,
+                      el = M.adjust (flip S.difference m) (fl state) . M.adjust (S.union m) dir $ (el state) }
+                      ) moves
+res :: Maybe [State]
+res = aStar nbrs dstA magic goalA initState
 
 main :: IO()
 main = do
-  putStrLn $ "Part 1: " <> show (part1)
+  putStrLn $ "Part 1: " <> show (part1 initState)
   -- putStrLn $ "Part 2: " <> show (part2)
