@@ -5,6 +5,7 @@ import Data.List (permutations, (\\), foldl')
 import Data.Set qualified as S
 import Data.Map.Strict qualified as M
 import Data.Foldable (Foldable(toList))
+import Data.IntMap (member)
 
 type Coord = (Int, Int)
 type Points = S.Set Coord
@@ -20,19 +21,16 @@ type Route = [Coord]
 (!+!) :: Coord -> Coord -> Int
 (!+!) (x1, y1) (x2, y2) = abs (x2 - x1) + abs (y2 - y1)
 
-dp :: Walls -> Coord -> Coord -> Int
-dp w b e = go (getAdjacents w b) (S.singleton b) (M.singleton b 0)
-  where
-    go :: Queue -> Seen -> DP -> Int
-    go q seen dp
-      | S.null q = fromJust . M.lookup e $ dp
-      -- | cand == e = minDist + 1
-      | otherwise = go (S.union adj' $ S.delete cand q) (S.union seen adj') (M.insert cand (minDist + 1) dp)
-      where
-        cand = bestCand e q
-        adj = getAdjacents w cand
-        adj' = S.filter (not . flip S.member seen) adj
-        minDist = getMinDist dp adj
+dp0 :: Walls -> Coord -> Coord -> Int
+dp0 w b e = go (S.toList $ getAdjacents w b) [b] (M.singleton b 0)
+  where go :: [Coord] -> [Coord] -> DP -> Int
+        go [] _ dp = fromJust (M.lookup e dp)
+        go (q:qs) seen dp = go newQ newS newDp
+          where adj = (S.toList) $ getAdjacents w q
+                adj' = filter (not . flip elem seen) adj
+                newQ = qs <> adj'
+                newS = seen <> adj'
+                newDp = if null adj then dp else M.insert q ((getMinDist dp (S.fromList adj)) + 1) dp
 
 dp1 :: Walls -> Points -> DM
 dp1 w p = foldl' go M.empty (S.toList p)
@@ -54,7 +52,7 @@ getDistMatrix :: Walls -> Points -> DM
 getDistMatrix w p =
   let ps = pairs p
   in M.fromList (map go ps)
-    where go (c1,c2) = ((c1,c2), dp w c1 c2)
+    where go (c1,c2) = ((c1,c2), dp0 w c1 c2)
 
 pairs :: Points -> [(Coord, Coord)]
 pairs = go . toList
@@ -83,7 +81,7 @@ bestCand coord ps = snd (S.foldl' go (maxBound :: Int, (0,0)) ps)
 getRouteLength :: DM -> Route -> Int
 getRouteLength _ [] = 0
 getRouteLength _ [x] = 0
-getRouteLength d (x:y:z) = fromJust (M.lookup (x,y) d) + (getRouteLength d (y:z))
+getRouteLength d (x:y:z) = getLength d x y + (getRouteLength d (y:z))
 
 getLength :: DM -> Coord -> Coord -> Int
 getLength dm c1 c2 = case (M.lookup (c1,c2) dm) of
@@ -114,8 +112,8 @@ part1 :: Input -> Int
 part1 input = let w = walls input
                   p = points input
                   z = zero input
-                  -- dm = getDistMatrix w (S.insert z p)
-                  dm = dp1 w (S.insert z p)
+                  dm = getDistMatrix w (S.insert z p)
+                  -- dm = dp1 w (S.insert z p)
                   routes = map (z:) (permutations $ S.toList p)
                in minimum . map (getRouteLength dm) $ routes
 
@@ -123,8 +121,8 @@ part2 :: Input -> Int
 part2 input = let w = walls input
                   p = points input
                   z = zero input
-                  -- dm = getDistMatrix w (S.insert z p)
-                  dm = dp1 w (S.insert z p)
+                  dm = getDistMatrix w (S.insert z p)
+                  -- dm = dp1 w (S.insert z p)
                   routes = map (\r -> [z] ++ r ++ [z]) (permutations $ S.toList p)
                in minimum . map (getRouteLength dm) $ routes
 
