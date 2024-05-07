@@ -1,9 +1,12 @@
 module AOC where
 
-type Coord = (Int, Int)
+data Coord = Coord { _x, _y :: Int } deriving (Eq, Ord, Show)
 
-(<+>) :: Coord -> Coord -> Coord
-(<+>) (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+instance Semigroup Coord where
+  c1 <> c2 = Coord (_x c1 + _x c2) (_y c1 + _y c2)
+instance Monoid Coord where
+  mempty = Coord 0 0
+  mappend = (<>)
 
 manhattan :: Coord -> Coord -> Int
-manhattan (x1,y1) (x2,y2) = abs (x2 - x1) + abs (y2 - y1)
+manhattan c1 c2 = abs (_x c1 - _x c2) + abs (_y c1 - _y c2)
