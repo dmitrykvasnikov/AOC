@@ -5,7 +5,7 @@ import Data.Maybe (fromMaybe, catMaybes)
 import Text.Regex.Applicative (RE, match, (=~), sym, psym, string, many, some, (<|>), reFoldl)
 import Text.Regex.Applicative.Common (decimal)
 import Data.List (foldl')
-import Data.Bits
+import Data.Map.Strict qualified as M
 
 -- /** Utilities
 type Parser a = RE Char a
@@ -23,7 +23,7 @@ dec v = plus v (-1)
 
 type Input = (Int,Int)
 input :: Input
-input = (65,8921)
+input = (699,124)
 
 toBit :: Int -> Char
 toBit 0 = '0'
@@ -43,8 +43,17 @@ next 'a' n = (n * 16807) `mod` 2147483647
 next 'b' n = (n * 48271) `mod` 2147483647
 next _ _   = error "step"
 
+
+next2 :: Char -> Int -> Int
+next2 'a' n = let n' = (n * 16807) `mod` 2147483647
+              in if (mod n' 4 == 0) then n' else next2 'a' n'
+next2 'b' n = let n' = (n * 48271) `mod` 2147483647
+              in if (mod n' 8 == 0) then n' else next2 'b' n'
+next2 _ _   = error "step"
+
 step :: (Int,Int) -> (Int,Int)
 step (a,b) = (next 'a' a, next 'b' b)
+
 
 run1 :: Int -> (Int,Int) -> Int -> Int
 run1 rounds gens count
@@ -59,7 +68,11 @@ part1 input = length . snd $ foldl' go (step input, []) [1..40000000]
         go (g@(a,b), res) _ = if toBits a == toBits b then (step g, g:res) else (step g, res)
 
 part2 :: Input -> Int
-part2 input = 42
+part2 input = length . snd $ foldl' go (input, []) [1..5000000]
+  where go :: (Input, [Input]) -> Int -> (Input, [Input])
+        go ((a,b), res) _ = let a' = next2 'a' a
+                                b' = next2 'b' b
+                          in if toBits a' == toBits b' then ((a',b'), (a',b'):res) else ((a',b'), res)
 
 main :: IO()
 main = do
