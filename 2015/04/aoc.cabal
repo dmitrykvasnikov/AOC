@@ -71,7 +71,7 @@ executable x06
                     , LambdaCase
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.19.0.0
+    build-depends:    base ^>=4.20.0.0
                     , regex-applicative
                     , mtl
                     , containers
@@ -81,4 +81,4 @@ executable x06
     hs-source-dirs:   .
 
     -- Base language which the package is written in.
-    default-language: Haskell2010
+    default-language: GHC2024
