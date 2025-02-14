@@ -60,6 +60,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  AOC2024D1
+                    , AOC2024D2
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -70,6 +71,7 @@ library
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.20.0.0
                     , regex-applicative
+                    , containers
 
     -- Directories containing source files.
     hs-source-dirs:   src
