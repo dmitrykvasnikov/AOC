@@ -5,7 +5,9 @@ import           Control.Arrow ((&&&))
 type Input = String
 
 getInput :: IO Input
-getInput = pure "Not implemented yet"
+getInput = do
+  i <- readFile "./input/day"
+  pure "Not implemented yet"
 
 part1 :: Input -> Int
 part1 i = 0

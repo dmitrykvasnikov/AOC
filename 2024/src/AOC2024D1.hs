@@ -3,7 +3,7 @@ module AOC2024D1 (solution, part1, part2) where
 import           Control.Arrow                 ((&&&))
 import           Data.Foldable                 (foldr')
 import           Data.List                     (sort)
-import qualified Data.Map                      as M
+import qualified Data.Map                      as M (empty, insertWith, lookup)
 import           Data.Maybe                    (catMaybes, fromMaybe)
 import           Text.Regex.Applicative
 import           Text.Regex.Applicative.Common
